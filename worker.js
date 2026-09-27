@@ -8,7 +8,7 @@ export default {
         headers: {
           // Swap in your own email before deploying — chess.com blocks
           // requests that don't identify a real app with a real contact.
-          'User-Agent': 'brilliant-chess-app/1.0 (contact: you@example.com)'
+          'User-Agent': 'brilliant-chess-app/1.0 (contact: chessnerd118@gmail.com)'
         }
       });
       const body = await upstream.text();
