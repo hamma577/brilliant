@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>index.html</title>
+<title>Brilliant — Free Chess Analysis</title>
 <style>
 :root{
   --bg:#0a0714; --panel:rgba(255,255,255,.045); --border:rgba(167,139,250,.22);
@@ -215,9 +215,7 @@ footer{text-align:center;color:var(--dim);font-size:.85rem;padding:10px 0 60px}
 <script type="module">
 import { Chess } from "https://cdn.jsdelivr.net/npm/chess.js@1.4.0/dist/esm/chess.js";
 
-const SF_BASE = 'https://cdn.jsdelivr.net/npm/stockfish@19.0.0/bin/';
-const SF_JS = SF_BASE + 'stockfish-19-lite-single.js';
-const SF_WASM = SF_BASE + 'stockfish-19-lite-single.wasm';
+const SF_JS = '/engine/stockfish-19-lite-single.js';
 const DEPTH = 14, HIST_DEPTH = 11;
 const PIECES = {p:'♟',n:'♞',b:'♝',r:'♜',q:'♛',k:'♚',P:'♙',N:'♘',B:'♗',R:'♖',Q:'♕',K:'♔'};
 
@@ -248,28 +246,17 @@ const worstListEl = $('worstList'), worstBoardWrapEl = $('worstBoardWrap'), wors
 
 let engine = null;
 
-function tryWorker(url) {
-  return new Promise((resolve, reject) => {
-    let w;
-    try { w = new Worker(url); } catch (e) { reject(e); return; }
-    const t = setTimeout(() => reject(new Error('engine load timed out')), 20000);
+async function loadEngine() {
+  if (engine) return engine;
+  engine = await new Promise((resolve, reject) => {
+    const w = new Worker(SF_JS);
+    const t = setTimeout(() => reject(new Error('Stockfish did not respond to init (uci) within 20s')), 20000);
     w.onmessage = (e) => {
       if (String(e.data).includes('uciok')) { clearTimeout(t); w.onmessage = null; w.onerror = null; resolve(w); }
     };
-    w.onerror = () => { clearTimeout(t); reject(new Error('worker error')); };
+    w.onerror = (e) => { clearTimeout(t); reject(new Error('Stockfish worker failed to start: ' + (e.message || 'unknown error'))); };
     w.postMessage('uci');
   });
-}
-
-async function loadEngine() {
-  if (engine) return engine;
-  try {
-    engine = await tryWorker(SF_JS);
-  } catch (e) {
-    const code = await (await fetch(SF_JS)).text();
-    const blobUrl = URL.createObjectURL(new Blob([code], { type: 'application/javascript' }));
-    engine = await tryWorker(blobUrl + '#' + encodeURIComponent(SF_WASM) + ',worker');
-  }
   return engine;
 }
 
